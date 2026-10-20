@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Üye Doğrulama · GBTD</title>
+<style>
+  :root {
+    --ink: #14181c; --soft: #4a5560; --mute: #79848f; --line: #e2e6ea; --paper: #ffffff;
+    --yesil: #0f8a43; --turuncu: #b4560b; --kirmizi: #b3001b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 26rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  .marka { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
+  .logo { width: 2.5rem; height: 2.5rem; border-radius: .6rem; background: var(--ink); color: #fff;
+    display: grid; place-items: center; font-weight: 800; letter-spacing: -.02em; font-size: .85rem; }
+  .marka b { display: block; font-size: .95rem; }
+  .marka span { color: var(--mute); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+  .kart { border-radius: 1.1rem; overflow: hidden; border: 1px solid var(--line); }
+  .bant { padding: 1.25rem 1.25rem 1.1rem; color: #fff; background: var(--mute); }
+  .bant.yesil { background: var(--yesil); } .bant.turuncu { background: var(--turuncu); } .bant.kirmizi { background: var(--kirmizi); }
+  .bant small { display: block; opacity: .85; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+  .bant h1 { margin: .25rem 0 0; font-size: 1.65rem; line-height: 1.2; letter-spacing: -.01em; }
+  .govde { padding: 1.25rem; }
+  .ad { font-size: 1.5rem; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; margin: 0 0 1rem; }
+  .satir { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem 0; border-top: 1px solid var(--line); }
+  .satir span { color: var(--soft); } .satir b { text-align: right; }
+  .saat { margin-top: 1rem; text-align: center; color: var(--mute); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .not { margin-top: 1.5rem; color: var(--mute); font-size: .8rem; text-align: center; }
+  .yukleniyor { padding: 2.5rem 1.25rem; text-align: center; color: var(--soft); }
+</style>
+</head>
+<body>
+<main>
+  <div class="marka">
+    <div class="logo">GBTD</div>
+    <div><b>Gemlik Beşiktaş</b><span>Taraftarları Derneği</span></div>
+  </div>
+
+  <div class="kart" id="kart">
+    <div class="yukleniyor" id="yukleniyor">Üyelik doğrulanıyor…</div>
+  </div>
+  <div class="saat" id="saat"></div>
+  <p class="not">Bu sayfa dernek üyesinin dijital kartını doğrular. Bilgiler okutulduğu anda dernek sisteminden gelir.</p>
+</main>
+<script>
+  // Dernek uygulamasının herkese açık anahtarı (uygulama paketinde de bulunur;
+  // yetkiler sunucudaki satır güvenliğiyle sınırlı). Fonksiyon yalnızca ad,
+  // üye no, üyelik ve aidat durumu döndürür (supabase 0072).
+  var URL_ = 'https://qucbzvnzpigzxrydzwxs.supabase.co';
+  var ANAHTAR = 'sb_publishable__5F_0ZYS1NWZd4hDXp-TkA_D3w4KNjL';
+
+  var kart = document.getElementById('kart');
+  var saat = document.getElementById('saat');
+  function iki(n) { return (n < 10 ? '0' : '') + n; }
+  // Canlı saat: ekran görüntüsünün değil, o an açılan sayfanın gösterildiğini belli eder.
+  function saatYaz() {
+    var d = new Date();
+    saat.textContent = 'Doğrulama · ' + iki(d.getDate()) + '.' + iki(d.getMonth() + 1) + '.' + d.getFullYear() +
+      ' ' + iki(d.getHours()) + ':' + iki(d.getMinutes()) + ':' + iki(d.getSeconds());
+  }
+  saatYaz(); setInterval(saatYaz, 1000);
+
+  function kac(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function goster(renk, ust, baslik, govde) {
+    kart.innerHTML = '<div class="bant ' + renk + '"><small>' + kac(ust) + '</small><h1>' + kac(baslik) + '</h1></div>' +
+      (govde ? '<div class="govde">' + govde + '</div>' : '');
+  }
+
+  var k = (new URLSearchParams(location.search).get('k') || '').trim();
+  if (!/^[0-9a-fA-F-]{36}$/.test(k)) {
+    goster('kirmizi', 'Dijital üye kartı', 'Geçersiz kart', '<p>Bu QR kodu bir GBTD üye kartına ait değil.</p>');
+  } else {
+    fetch(URL_ + '/rest/v1/rpc/public_member_card', {
+      method: 'POST',
+      headers: { apikey: ANAHTAR, Authorization: 'Bearer ' + ANAHTAR, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_id: k })
+    }).then(function (r) { return r.json(); }).then(function (u) {
+      if (!u || !u.found) {
+        goster('kirmizi', 'Dijital üye kartı', 'Üye bulunamadı', '<p>Bu kart sistemdeki bir üyeye ait değil.</p>');
+        return;
+      }
+      var odendi = u.dues === 'paid' || u.dues === 'exempt';
+      var renk = !u.active ? 'kirmizi' : odendi ? 'yesil' : 'turuncu';
+      var baslik = !u.active ? 'Üyeliği aktif değil' : 'Aktif üye';
+      var aidat = u.dues === 'paid' ? 'Ödendi' : u.dues === 'exempt' ? 'Muaf' : 'Ödeme bekleniyor';
+      goster(renk, 'Dijital üye kartı', baslik,
+        '<p class="ad">' + kac(u.fullName) + '</p>' +
+        '<div class="satir"><span>Üye no</span><b>' + kac(u.memberNo || '—') + '</b></div>' +
+        '<div class="satir"><span>Üyelik</span><b>' + (u.active ? 'Aktif' : 'Aktif değil') + '</b></div>' +
+        '<div class="satir"><span>Aidat</span><b>' + kac(aidat) + '</b></div>');
+    }).catch(function () {
+      goster('', 'Dijital üye kartı', 'Doğrulanamadı', '<p>Bağlantı kurulamadı. İnternet bağlantınızı kontrol edip sayfayı yenileyin.</p>');
+    });
+  }
+</script>
+</body>
+</html>
